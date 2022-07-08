@@ -12,15 +12,11 @@ import (
 
 const name = "card-pay-web"
 const version = "1.0.0"
-const cssVersion = "1"
 
 type config struct {
 	port int
 	env  string
 	api  string
-	db   struct {
-		dsn string // Data source name
-	}
 	stripe struct {
 		secret string
 		key    string
@@ -45,7 +41,7 @@ func (app *application) serve() error {
 		WriteTimeout: 5 * time.Second,
 	}
 
-	app.infoLog.Println(fmt.Sprintf("Starting %s server in %s mode on port %d", name, app.config.env, app.config.port))
+	app.infoLog.Printf(fmt.Sprintf("Starting %s server in %s mode on port %d", name, app.config.env, app.config.port))
 	return server.ListenAndServe()
 }
 
@@ -76,6 +72,6 @@ func main() {
 
 	err := app.serve()
 	if err != nil {
-		app.errorLog.Fatalln(err)
+		log.Fatalln(err)
 	}
 }
