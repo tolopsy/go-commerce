@@ -2,7 +2,6 @@ STRIPE_SECRET=sk_test_your stripe secret key
 STRIPE_KEY=pk_test_your_stripe_publishable_key
 WEB_PORT=8000
 API_PORT=9000
-DSN=root@tcp(localhost:3306)/widgets?parseTime=true&tls=false
 
 ## build: builds all binaries
 build: clean build_front build_back
