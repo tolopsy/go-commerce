@@ -7,17 +7,22 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"go-commerce/internal/driver"
 )
 
 const name = "card-pay-backend"
 const version = "1.0.0"
 
 type config struct {
-	port int
-	env  string
+	port   int
+	env    string
 	stripe struct {
 		secret string
 		key    string
+	}
+	db struct {
+		dsn string
 	}
 }
 
@@ -52,9 +57,16 @@ func main() {
 
 	conf.stripe.key = os.Getenv("STRIPE_KEY")
 	conf.stripe.secret = os.Getenv("STRIPE_SECRET")
+	conf.db.dsn = os.Getenv("DB_DSN")
 
 	infoLog := log.New(os.Stdout, "INFO:\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stdout, "ERROR:\t", log.Ldate|log.Ltime|log.Lshortfile)
+
+	conn, err := driver.OpenDB(conf.db.dsn)
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+	defer conn.Close()
 
 	app := &application{
 		config:   conf,

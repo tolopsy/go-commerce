@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/tolopsy/card-pay/internal/payment"
+	"go-commerce/internal/payment"
 )
 
 type ChargeRequestPayload struct {
