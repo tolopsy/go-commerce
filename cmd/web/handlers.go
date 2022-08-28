@@ -16,21 +16,15 @@ func (app *application) PaymentSuccessful(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// read post data
-	cardHolderName := r.Form.Get("cardholder_name")
-	cardHolderEmail := r.Form.Get("cardholder_email")
-	paymentIntent := r.Form.Get("payment_intent")
-	paymentMethod := r.Form.Get("payment_method")
-	paymentAmount := r.Form.Get("payment_amount")
-	paymentCurrency := r.Form.Get("payment_currency")
-
 	cardHolderData := make(map[string]interface{})
-	cardHolderData["name"] = cardHolderName
-	cardHolderData["email"] = cardHolderEmail
-	cardHolderData["payment_intent"] = paymentIntent
-	cardHolderData["payment_method"] = paymentMethod
-	cardHolderData["payment_amount"] = paymentAmount
-	cardHolderData["payment_currency"] = paymentCurrency
+
+	// read post data
+	cardHolderData["name"] = r.Form.Get("cardholder_name")
+	cardHolderData["email"] = r.Form.Get("cardholder_email")
+	cardHolderData["payment_intent"] = r.Form.Get("payment_intent")
+	cardHolderData["payment_method"] = r.Form.Get("payment_method")
+	cardHolderData["payment_amount"] = r.Form.Get("payment_amount")
+	cardHolderData["payment_currency"] = r.Form.Get("payment_currency")
 
 	if err := app.renderTemplate(w, r, "payment_successful", &templateData{Data: cardHolderData}); err != nil {
 		app.errorLog.Println(err)
