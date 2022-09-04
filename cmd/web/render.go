@@ -23,7 +23,7 @@ type templateData struct {
 }
 
 func formatCurrency(value int) string {
-	formattedValue := float32(value/100)
+	formattedValue := float32(value) /float32(100)
 	return fmt.Sprintf("$%.2f", formattedValue)
 }
 
