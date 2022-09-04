@@ -8,7 +8,18 @@ import (
 
 func (app *application) routes() http.Handler {
 	mux := chi.NewRouter()
-	mux.Get("/pay", app.PaymentTerminal)
+	mux.Use(SessionLoad)
+
+	mux.Get("/", app.Home)
+	mux.Get("/pay-terminal", app.PaymentTerminal)
+	mux.Post("/terminal-payment-successful", app.TerminalPaymentSuccessful)
+	mux.Get("/terminal-receipt", app.TerminalReceipt)
+
+	mux.Get("/widget/{id}", app.ChargeOnce)
 	mux.Post("/payment-successful", app.PaymentSuccessful)
+	mux.Get("/receipt", app.Receipt)
+
+	fileServer := http.FileServer(http.Dir("./static"))
+	mux.Handle("/static/*", http.StripPrefix("/static", fileServer))
 	return mux
 }

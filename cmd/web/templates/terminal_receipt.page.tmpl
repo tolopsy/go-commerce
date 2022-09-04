@@ -1,0 +1,20 @@
+{{template "base" .}}
+
+{{define "title"}}
+    Virtual Terminal Payment Successful
+{{end}}
+
+{{define "content"}}
+    {{$trxn := index .Data "transaction"}}
+    <h2 class="mt-5">Virtual Terminal Payment Successful</h2>
+    <hr>
+    <p>Transaction ID: {{$trxn.PaymentIntentID}}</p>
+    <p>Customer's Name: {{$trxn.FirstName}} {{$trxn.LastName}}</p>
+    <p>Customer's Email: {{$trxn.Email}}</p>
+    <p>Payment Method: {{$trxn.PaymentMethodID}}</p>
+    <p>Payment Amount: {{$trxn.Amount}}</p>
+    <p>Payment Currency: {{$trxn.Currency}}</p>
+    <p>Last Four: {{$trxn.LastFour}}</p>
+    <p>Bank Return Code: {{$trxn.BankReturnCode}}</p>
+    <p>Expiry Date: {{$trxn.ExpiryMonth}}/{{$trxn.ExpiryYear}}</p>
+{{end}}

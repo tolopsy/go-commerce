@@ -1,13 +1,108 @@
 package main
 
 import (
+	"go-commerce/internal/models"
+	"go-commerce/internal/payment"
 	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/go-chi/chi/v5"
 )
+
+type TransactionData struct {
+	FirstName       string
+	LastName        string
+	Email           string
+	PaymentIntentID string
+	PaymentMethodID string
+	Amount          int
+	Currency        string
+	LastFour        string
+	ExpiryMonth     int
+	ExpiryYear      int
+	BankReturnCode  string
+}
+
+func (app *application) GetTransactionData(r *http.Request) (TransactionData, error) {
+	var transactionData TransactionData
+	if err := r.ParseForm(); err != nil {
+		return transactionData, nil
+	}
+
+	firstName := r.Form.Get("first_name")
+	lastName := r.Form.Get("last_name")
+	email := r.Form.Get("email")
+
+	amount, _ := strconv.Atoi(r.Form.Get("payment_amount"))
+	paymentMethodId := r.Form.Get("payment_method")
+	paymentIntentId := r.Form.Get("payment_intent")
+	currency := r.Form.Get("payment_currency")
+
+	payConf := payment.Config{
+		Secret: app.config.stripe.secret,
+		Key:    app.config.stripe.key,
+	}
+	paymentIntent, err := payConf.RetrievePaymentIntent(paymentIntentId)
+	if err != nil {
+		return transactionData, err
+	}
+	paymentMethod, err := payConf.GetPaymentMethod(paymentMethodId)
+	if err != nil {
+		return transactionData, err
+	}
+
+	lastFour := paymentMethod.Card.Last4
+	expiryMonth := paymentMethod.Card.ExpMonth
+	expiryYear := paymentMethod.Card.ExpYear
+	bankReturnCode := paymentIntent.Charges.Data[0].ID
+
+	transactionData = TransactionData{
+		FirstName:       firstName,
+		LastName:        lastName,
+		Email:           email,
+		PaymentIntentID: paymentIntentId,
+		PaymentMethodID: paymentMethodId,
+		Amount:          amount,
+		Currency:        currency,
+		LastFour:        lastFour,
+		ExpiryMonth:     int(expiryMonth),
+		ExpiryYear:      int(expiryYear),
+		BankReturnCode:  bankReturnCode,
+	}
+	return transactionData, nil
+}
 
 func (app *application) PaymentTerminal(w http.ResponseWriter, r *http.Request) {
 	stringMap := make(map[string]string)
 	stringMap["publishable_key"] = app.config.stripe.key
 	if err := app.renderTemplate(w, r, "terminal", &templateData{StringMap: stringMap}, "stripe-js"); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) Home(w http.ResponseWriter, r *http.Request) {
+	if err := app.renderTemplate(w, r, "home", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) ChargeOnce(w http.ResponseWriter, r *http.Request) {
+	stringMap := make(map[string]string)
+	stringMap["publishable_key"] = app.config.stripe.key
+
+	id := chi.URLParam(r, "id")
+	widgetID, _ := strconv.Atoi(id)
+
+	widget, err := app.DB.GetWidget(widgetID)
+	if err != nil {
+		app.errorLog.Println(err) // TODO: Handle error properly
+		return
+	}
+	data := make(map[string]interface{})
+	data["widget"] = widget
+
+	if err := app.renderTemplate(w, r, "buy", &templateData{StringMap: stringMap, Data: data}, "stripe-js"); err != nil {
 		app.errorLog.Println(err)
 	}
 }
@@ -18,17 +113,152 @@ func (app *application) PaymentSuccessful(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	cardHolderData := make(map[string]interface{})
+	product_id, _ := strconv.Atoi(r.Form.Get("product_id"))
+	trxnData, err := app.GetTransactionData(r)
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
 
-	// read post data
-	cardHolderData["name"] = r.Form.Get("cardholder_name")
-	cardHolderData["email"] = r.Form.Get("cardholder_email")
-	cardHolderData["payment_intent"] = r.Form.Get("payment_intent")
-	cardHolderData["payment_method"] = r.Form.Get("payment_method")
-	cardHolderData["payment_amount"] = r.Form.Get("payment_amount")
-	cardHolderData["payment_currency"] = r.Form.Get("payment_currency")
+	// create new customer
+	customer_id, err := app.SaveCustomer(trxnData.FirstName, trxnData.LastName, trxnData.Email)
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
 
-	if err := app.renderTemplate(w, r, "payment_successful", &templateData{Data: cardHolderData}); err != nil {
+	// create new transaction
+	transaction := models.Transaction{
+		Amount:              trxnData.Amount,
+		Currency:            trxnData.Currency,
+		LastFour:            trxnData.LastFour,
+		BankReturnCode:      trxnData.BankReturnCode,
+		PaymentIntent:       trxnData.PaymentIntentID,
+		PaymentMethod:       trxnData.PaymentMethodID,
+		CardExpiryMonth:     trxnData.ExpiryMonth,
+		CardExpiryYear:      trxnData.ExpiryYear,
+		TransactionStatusID: 2,
+		CreatedAt:           time.Now(),
+		UpdatedAt:           time.Now(),
+	}
+	transaction_id, err := app.SaveTransaction(transaction)
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
+
+	// create new order
+	order := models.Order{
+		WidgetID:      product_id,
+		TransactionID: transaction_id,
+		CustomerID:    customer_id,
+		StatusID:      1,
+		Quantity:      1,
+		Amount:        trxnData.Amount,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+	}
+	_, err = app.SaveOrder(order)
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
+
+	// write data to session and redirect user to new page
+	app.SessionManager.Put(r.Context(), "receipt", trxnData)
+	http.Redirect(w, r, "/receipt", http.StatusSeeOther)
+}
+
+func (app *application) Receipt(w http.ResponseWriter, r *http.Request) {
+	transactionData, ok := app.SessionManager.Get(r.Context(), "receipt").(TransactionData)
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	data := make(map[string]interface{})
+	data["transaction"] = transactionData
+	app.SessionManager.Remove(r.Context(), "receipt")
+	if err := app.renderTemplate(w, r, "receipt", &templateData{Data: data}); err != nil {
 		app.errorLog.Println(err)
 	}
+}
+
+func (app *application) TerminalPaymentSuccessful(w http.ResponseWriter, r *http.Request) {
+	trxnData, err := app.GetTransactionData(r)
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
+
+	// create new transaction
+	transaction := models.Transaction{
+		Amount:              trxnData.Amount,
+		Currency:            trxnData.Currency,
+		LastFour:            trxnData.LastFour,
+		BankReturnCode:      trxnData.BankReturnCode,
+		PaymentIntent:       trxnData.PaymentIntentID,
+		PaymentMethod:       trxnData.PaymentMethodID,
+		CardExpiryMonth:     trxnData.ExpiryMonth,
+		CardExpiryYear:      trxnData.ExpiryYear,
+		TransactionStatusID: 2,
+		CreatedAt:           time.Now(),
+		UpdatedAt:           time.Now(),
+	}
+	_, err = app.SaveTransaction(transaction)
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
+
+	// write data to session and redirect user to new page
+	app.SessionManager.Put(r.Context(), "receipt", trxnData)
+	http.Redirect(w, r, "/terminal-receipt", http.StatusSeeOther)
+}
+
+func (app *application) TerminalReceipt(w http.ResponseWriter, r *http.Request) {
+	transactionData, ok := app.SessionManager.Get(r.Context(), "receipt").(TransactionData)
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	data := make(map[string]interface{})
+	data["transaction"] = transactionData
+	app.SessionManager.Remove(r.Context(), "receipt")
+	if err := app.renderTemplate(w, r, "terminal_receipt", &templateData{Data: data}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+// SaveCustomer saves customer and returns customer's id
+func (app *application) SaveCustomer(firstName, lastName, email string) (int, error) {
+	customer := models.Customer{
+		FirstName: firstName,
+		LastName:  lastName,
+		Email:     email,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	customer_id, err := app.DB.InsertCustomer(customer)
+	if err != nil {
+		return 0, err
+	}
+	return customer_id, nil
+}
+
+// SaveTransaction saves transaction and returns its id
+func (app *application) SaveTransaction(transaction models.Transaction) (int, error) {
+	txn_id, err := app.DB.InsertTransaction(transaction)
+	if err != nil {
+		return 0, err
+	}
+	return txn_id, nil
+}
+
+// SaveOrder saves an order and returns its id
+func (app *application) SaveOrder(order models.Order) (int, error) {
+	order_id, err := app.DB.InsertOrder(order)
+	if err != nil {
+		return 0, err
+	}
+	return order_id, nil
 }

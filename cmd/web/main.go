@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/gob"
 	"flag"
 	"fmt"
 	"html/template"
@@ -10,10 +11,15 @@ import (
 	"time"
 
 	"go-commerce/internal/driver"
+	"go-commerce/internal/models"
+
+	"github.com/alexedwards/scs/v2"
 )
 
 const name = "card-pay-web"
 const version = "1.0.0"
+
+var sessionManager *scs.SessionManager
 
 type config struct {
 	port   int
@@ -29,11 +35,13 @@ type config struct {
 }
 
 type application struct {
-	config        config
-	infoLog       *log.Logger
-	errorLog      *log.Logger
-	templateCache map[string]*template.Template
-	version       string
+	config         config
+	infoLog        *log.Logger
+	errorLog       *log.Logger
+	templateCache  map[string]*template.Template
+	version        string
+	DB             models.DBWrapper
+	SessionManager *scs.SessionManager
 }
 
 func (app *application) serve() error {
@@ -51,6 +59,7 @@ func (app *application) serve() error {
 }
 
 func main() {
+	gob.Register(TransactionData{})
 	var conf config
 
 	flag.IntVar(&conf.port, "port", 8000, "Server port to listen flag on (default: 8000)")
@@ -72,14 +81,20 @@ func main() {
 	}
 	defer conn.Close()
 
+	// initialize session management
+	sessionManager = scs.New()
+	sessionManager.Lifetime = 24 * time.Hour
+
 	templateCache := make(map[string]*template.Template)
 
 	app := &application{
-		config:        conf,
-		infoLog:       infoLog,
-		errorLog:      errorLog,
-		templateCache: templateCache,
-		version:       version,
+		config:         conf,
+		infoLog:        infoLog,
+		errorLog:       errorLog,
+		templateCache:  templateCache,
+		version:        version,
+		DB:             models.DBWrapper{DB: conn},
+		SessionManager: sessionManager,
 	}
 
 	err = app.serve()

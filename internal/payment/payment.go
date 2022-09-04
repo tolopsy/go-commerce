@@ -5,6 +5,7 @@ import (
 
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/paymentintent"
+	"github.com/stripe/stripe-go/v72/paymentmethod"
 )
 
 type Config struct {
@@ -22,7 +23,7 @@ type Transaction struct {
 	BankReturnCode string
 }
 
-// Charge wrapper is intended to make it easier to extend support for more payment gateways.
+// Charge creates payment intent/order.
 func (c *Config) Charge(amount int) (*stripe.PaymentIntent, string, error) {
 	return c.createPaymentIntent(amount)
 }
@@ -45,6 +46,29 @@ func (c *Config) createPaymentIntent(amount int) (*stripe.PaymentIntent, string,
 		return nil, msg, err
 	}
 	return pi, msg, nil
+}
+
+// GetPaymentMethod gets payment method by id
+func (c *Config) GetPaymentMethod(id string) (*stripe.PaymentMethod, error) {
+	stripe.Key = c.Secret
+
+	paymentMethod, err := paymentmethod.Get(id, nil)
+	if err != nil {
+		return nil, err
+	}
+	return paymentMethod, nil
+}
+
+// RetrievePaymentIntent retrieves existing payment intent by id
+func (c *Config) RetrievePaymentIntent(id string) (*stripe.PaymentIntent, error) {
+	stripe.Key = c.Secret
+
+	paymentIntent, err := paymentintent.Get(id, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return paymentIntent, nil
 }
 
 func stripeCardErrorMessage(code stripe.ErrorCode) string {

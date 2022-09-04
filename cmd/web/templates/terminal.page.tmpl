@@ -9,19 +9,19 @@
 <hr>
 
 <div class="alert alert-danger text-center d-none" id="card-messages"></div>
-<form action="/payment-successful" method="post" name="payment_form" id="payment_form"
+<form action="/terminal-payment-successful" method="post" name="payment_form" id="payment_form"
     class="d-block needs-validation payment-form" autocomplete="off" novalidate>
     <div class="mb-3">
-        <label for="amount" class="form-label">Amount</label>
-        <input type="text" class="form-control" id="amount" name="amount" required>
+        <label for="charge_amount" class="form-label">Amount</label>
+        <input type="text" class="form-control" id="charge_amount" required>
     </div>
      <div class="mb-3">
         <label for="cardholder-name" class="form-label">Cardholder Name</label>
         <input type="text" class="form-control" id="cardholder-name" name="cardholder_name" required>
     </div>
      <div class="mb-3">
-        <label for="cardholder-email" class="form-label">Cardholder Email</label>
-        <input type="email" class="form-control" id="cardholder-email" name="cardholder_email" required>
+        <label for="email" class="form-label">Cardholder Email</label>
+        <input type="email" class="form-control" id="email" name="email" required>
     </div>
 
     <div class="mb-3">
@@ -37,6 +37,8 @@
             <span class="visually-hidden">Loading...</span>
         </div>
     </div>
+
+    <input type="hidden" name="amount" id="amount">
     <input type="hidden" name="payment_intent" id="payment_intent">
     <input type="hidden" name="payment_method" id="payment_method">
     <input type="hidden" name="payment_amount" id="payment_amount">
@@ -45,5 +47,16 @@
 {{end}}
 
 {{define "js"}}
+<script>
+document.getElementById("charge_amount").addEventListener('change', function(event){
+    value = event.target.value
+    amountInput = document.getElementById("amount")
+    if (value !== "") {
+        amountInput.value = parseInt((value * 100), 10);
+    } else {
+        amountInput.value = 0;
+    }
+});
+</script>
 {{template "stripe-js" .}}
 {{end}}

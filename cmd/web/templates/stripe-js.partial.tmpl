@@ -50,7 +50,9 @@
         hidePayButton()
 
         // parse amount
-        let amountToCharge = String(parseFloat(document.getElementById("amount").value) * 100)
+        // TODO: Fix amountToCharge to allow for both user inputted amount and fixed amount
+        // i.e Payment from terminal page and payment from buy page.
+        let amountToCharge = document.getElementById("amount").value
         let payload = {
             amount: amountToCharge,
             currency: 'usd',
@@ -86,7 +88,7 @@
                         } else if (result.paymentIntent) {
                             if (result.paymentIntent.status === "succeeded") {
                                 // card has been charged
-                                document.getElementById("payment_method").value = result.paymentIntent.payment_method_types[0]
+                                document.getElementById("payment_method").value = result.paymentIntent.payment_method
                                 document.getElementById("payment_intent").value = result.paymentIntent.id
                                 document.getElementById("payment_amount").value = result.paymentIntent.amount
                                 document.getElementById("payment_currency").value = result.paymentIntent.currency

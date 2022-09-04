@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"go-commerce/internal/driver"
+	"go-commerce/internal/models"
 )
 
 const name = "card-pay-backend"
@@ -31,6 +32,7 @@ type application struct {
 	infoLog  *log.Logger
 	errorLog *log.Logger
 	version  string
+	DB       models.DBWrapper
 }
 
 func (app *application) serve() error {
@@ -73,6 +75,7 @@ func main() {
 		infoLog:  infoLog,
 		errorLog: errorLog,
 		version:  version,
+		DB: models.DBWrapper{DB: conn},
 	}
 
 	if err := app.serve(); err != nil {
