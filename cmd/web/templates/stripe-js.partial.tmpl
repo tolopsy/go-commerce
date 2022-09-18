@@ -49,9 +49,6 @@
         form.classList.add("was-validated")
         hidePayButton()
 
-        // parse amount
-        // TODO: Fix amountToCharge to allow for both user inputted amount and fixed amount
-        // i.e Payment from terminal page and payment from buy page.
         let amountToCharge = document.getElementById("amount").value
         let payload = {
             amount: amountToCharge,
