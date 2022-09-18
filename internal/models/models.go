@@ -30,10 +30,17 @@ type Widget struct {
 	InventoryLevel int       `json:"inventory_level"`
 	Price          int       `json:"price"`
 	Image          string    `json:"image"`
+	IsRecurring    bool      `json:"is_recurring"`
+	PlanID         string    `json:"plan_id"`
 	CreatedAt      time.Time `json:"-"`
 	UpdatedAt      time.Time `json:"-"`
 }
 
+const (
+	OrderCleared = 1
+	OrderRefunded = 1
+	OrderCancelled = 1
+)
 // Order is the type for orders
 type Order struct {
 	ID            int       `json:"id"`
@@ -62,6 +69,15 @@ type TransactionStatus struct {
 	CreatedAt time.Time `json:"-"`
 	UpdatedAt time.Time `json:"-"`
 }
+
+// Transaction Status Options
+const (
+	TransactionPending           = 1
+	TransactionCleared           = 2
+	TransactionDeclined          = 3
+	TransactionRefunded          = 4
+	TransactionPartiallyRefunded = 5
+)
 
 // Transaction is the type for transactions
 type Transaction struct {
@@ -108,7 +124,7 @@ func (w *DBWrapper) GetWidget(id int) (Widget, error) {
 	row := w.DB.QueryRowContext(ctx, `
 		select
 			id, name, description, inventory_level, price,
-			coalesce(image, ''), created_at, updated_at
+			coalesce(image, ''), is_recurring, plan_id, created_at, updated_at
 		from widgets
 		where id = ?`, id)
 	if err := row.Scan(
@@ -118,6 +134,8 @@ func (w *DBWrapper) GetWidget(id int) (Widget, error) {
 		&widget.InventoryLevel,
 		&widget.Price,
 		&widget.Image,
+		&widget.IsRecurring,
+		&widget.PlanID,
 		&widget.CreatedAt,
 		&widget.UpdatedAt,
 	); err != nil {
