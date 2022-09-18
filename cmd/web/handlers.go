@@ -229,6 +229,30 @@ func (app *application) TerminalReceipt(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+func (app *application) BronzePlan(w http.ResponseWriter, r *http.Request) {
+	widget, err := app.DB.GetWidget(2)
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
+
+	data := make(map[string]interface{})
+	data["widget"] = widget
+
+	stringMap := make(map[string]string)
+	stringMap["publishable_key"] = app.config.stripe.key
+
+	if err := app.renderTemplate(w, r, "bronze_plan", &templateData{Data: data, StringMap: stringMap}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) BronzePlanReceipt(w http.ResponseWriter, r *http.Request) {
+	if err := app.renderTemplate(w, r, "plan_receipt", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
 // SaveCustomer saves customer and returns customer's id
 func (app *application) SaveCustomer(firstName, lastName, email string) (int, error) {
 	customer := models.Customer{
