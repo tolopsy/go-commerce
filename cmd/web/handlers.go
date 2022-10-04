@@ -253,6 +253,12 @@ func (app *application) BronzePlanReceipt(w http.ResponseWriter, r *http.Request
 	}
 }
 
+func (app *application) LoginPage(w http.ResponseWriter, r *http.Request) {
+	if err := app.renderTemplate(w, r, "login", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
 // SaveCustomer saves customer and returns customer's id
 func (app *application) SaveCustomer(firstName, lastName, email string) (int, error) {
 	customer := models.Customer{
