@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -26,13 +27,6 @@ type ChargeRequestPayload struct {
 	ProductID     string `json:"product_id"`
 	FirstName     string `json:"first_name"`
 	LastName      string `json:"last_name"`
-}
-
-type APIResponse struct {
-	OK      bool   `json:"ok"`
-	Message string `json:"message,omitempty"`
-	Content string `json:"content,omitempty"`
-	ID      string `json:"id,omitempty"`
 }
 
 func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request) {
@@ -68,9 +62,8 @@ func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request)
 		}
 	} else {
 		errorResponse := APIResponse{
-			OK:      false,
-			Message: msg,
-			Content: "",
+			HasError: true,
+			Message:  msg,
 		}
 		out, err = json.MarshalIndent(errorResponse, "", "    ")
 		if err != nil {
@@ -112,27 +105,29 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 		Key:      app.config.stripe.key,
 		Currency: payload.Currency,
 	}
-	okay := true
+
 	var subscription *stripe.Subscription
+
+	hasError := false
 	transactionMsg := "Transaction Successful"
 
 	stripeCustomer, msg, err := payConf.CreateCustomer(payload.PaymentMethod, payload.Email)
 	if err != nil {
 		app.errorLog.Println(err)
-		okay = false
+		hasError = true
 		transactionMsg = msg
 	}
 
-	if okay {
+	if !hasError {
 		subscription, err = payConf.SubscribeToPlan(stripeCustomer, payload.Plan, payload.Email, payload.LastFour, "")
 		if err != nil {
 			app.errorLog.Println(err)
-			okay = false
+			hasError = true
 			transactionMsg = "Error subscribing customer to plan"
 		}
 	}
 
-	if okay {
+	if !hasError {
 		app.infoLog.Println("New subscriber with ID: ", subscription.ID)
 		// store customer, order, transaction
 		customerID, err := app.SaveCustomer(payload.FirstName, payload.LastName, payload.Email)
@@ -178,8 +173,8 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 	}
 
 	resp := APIResponse{
-		OK:      okay,
-		Message: transactionMsg,
+		HasError: hasError,
+		Message:  transactionMsg,
 	}
 
 	out, err := json.MarshalIndent(resp, "", "	")
@@ -192,36 +187,56 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 	w.Write(out)
 }
 
-// SaveCustomer saves customer and returns customer's id
-func (app *application) SaveCustomer(firstName, lastName, email string) (int, error) {
-	customer := models.Customer{
-		FirstName: firstName,
-		LastName:  lastName,
-		Email:     email,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) {
+	var userInput struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
-	customer_id, err := app.DB.InsertCustomer(customer)
-	if err != nil {
-		return 0, err
-	}
-	return customer_id, nil
-}
 
-// SaveTransaction saves transaction and returns its id
-func (app *application) SaveTransaction(transaction models.Transaction) (int, error) {
-	txn_id, err := app.DB.InsertTransaction(transaction)
-	if err != nil {
-		return 0, err
-	}
-	return txn_id, nil
-}
+	err := app.readJSON(w, r, &userInput)
 
-// SaveOrder saves an order and returns its id
-func (app *application) SaveOrder(order models.Order) (int, error) {
-	order_id, err := app.DB.InsertOrder(order)
 	if err != nil {
-		return 0, err
+		app.badRequest(w, err)
+		return
 	}
-	return order_id, nil
+
+	user, err := app.DB.GetUserByEmail(userInput.Email)
+	if err != nil {
+		app.invalidCredentials(w)
+		return
+	}
+
+	isValidPassword, err := app.passwordMatches(user.Password, userInput.Password)
+	if err != nil {
+		app.invalidCredentials(w)
+		return
+	}
+
+	if !isValidPassword {
+		app.invalidCredentials(w)
+		return
+	}
+
+	token, err := models.GenerateToken(user.ID, 24*time.Hour, models.ScopeAuthentication)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	err = app.DB.InsertToken(token, user)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	var payload struct {
+		HasError bool          `json:"has_error"`
+		Message  string        `json:"message"`
+		Token    *models.Token `json:"authentication_token"`
+	}
+
+	payload.HasError = false
+	payload.Message = fmt.Sprintf("Token for %s created", user.Email)
+	payload.Token = token
+	app.writeJSON(w, payload, http.StatusOK)
 }
