@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"go-commerce/internal/models"
@@ -124,4 +125,28 @@ func (app *application) badRequest(w http.ResponseWriter, err error) error {
 		return err
 	}
 	return nil
+}
+
+func (app *application) authenticateToken(r *http.Request) (*models.User, error) {
+	authorizationHeader := r.Header.Get("Authorization")
+	if authorizationHeader == "" {
+		return nil, errors.New("no authorization header received")
+	}
+	
+	headerParts := strings.Split(authorizationHeader, " ")
+	if len(headerParts) != 2 || headerParts[0] != "Bearer" {
+		return nil, errors.New("no authorization header received")
+	}
+
+	token := headerParts[1]
+	if len(token) != 26 {
+		return nil, errors.New("authentication token is wrong")
+	}
+
+	user, err := app.DB.GetUserForToken(token)
+	if err != nil {
+		return nil, errors.New("no matching user found")
+	}
+
+	return user, nil
 }

@@ -240,3 +240,16 @@ func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) 
 	payload.Token = token
 	app.writeJSON(w, payload, http.StatusOK)
 }
+
+func (app *application) CheckAuthentication(w http.ResponseWriter, r *http.Request) {
+	user, err := app.authenticateToken(r)
+	if err != nil {
+		app.invalidCredentials(w)
+		return
+	}
+	payload := APIResponse{
+		HasError: false,
+		Message: fmt.Sprintf("authenticated user - %s", user.Email),
+	}
+	app.writeJSON(w, payload, http.StatusOK)
+}
