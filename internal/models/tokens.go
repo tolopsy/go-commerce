@@ -53,8 +53,8 @@ func (w *DBWrapper) InsertToken(t *Token, u User) error {
 
 	statement = `
 		insert into tokens
-			(user_id, name, email, token_hash, created_at, updated_at)
-			values (?, ?, ?, ?, ?, ?)
+			(user_id, name, email, token_hash, expiry, created_at, updated_at)
+			values (?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = w.DB.ExecContext(ctx, statement,
@@ -62,6 +62,7 @@ func (w *DBWrapper) InsertToken(t *Token, u User) error {
 		u.LastName,
 		u.Email,
 		t.Hash,
+		t.Expiry,
 		time.Now(),
 		time.Now(),
 	)
@@ -81,9 +82,9 @@ func (w *DBWrapper) GetUserForToken(token string) (*User, error) {
 		select u.id, u.first_name, u.last_name, u.email
 		from users u
 		inner join tokens t on (u.id = t.user_id)
-		where t.token_hash = ?
+		where t.token_hash = ? and t.expiry > ?
 	`
-	err := w.DB.QueryRowContext(ctx, query, tokenHash[:]).Scan(
+	err := w.DB.QueryRowContext(ctx, query, tokenHash[:], time.Now()).Scan(
 		&user.ID,
 		&user.FirstName,
 		&user.LastName,
