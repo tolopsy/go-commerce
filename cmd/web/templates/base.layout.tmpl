@@ -9,25 +9,6 @@
     <title>{{block "title" .}} {{end}}</title>
 
     <script>
-        let vtLink = document.getElementById("vt-link")
-        let loginLink = document.getElementById("login-link")
-
-        document.addEventListener("DOMContentLoaded", function(){
-            if (localStorage.getItem("token") !== null) {
-                loginLink.innerHTML = `<a class="nav-link" onclick="logout()" href="#!">Logout</a>`
-                vtLink.classList.remove("d-none")
-            } else {
-                loginLink.innerHTML = `<a class="nav-link" href="/login">Login</a>`
-            }
-            loginLink.classList.remove("d-none")
-        })
-
-        function logout() {
-            localStorage.removeItem("token");
-            localStorage.removeItem("token_expiry");
-            location.href = "/login";
-        }
-
         function checkAuth() {
             if (localStorage.getItem("token") === null) {
                 location.href = "/login";
@@ -101,6 +82,26 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
+    <script>
+        let vtLink = document.getElementById("vt-link")
+        let loginLink = document.getElementById("login-link")
+
+        document.addEventListener("DOMContentLoaded", function(){
+            if (localStorage.getItem("token") !== null) {
+                loginLink.innerHTML = `<a class="nav-link" onclick="logout()" href="#!">Logout</a>`
+                vtLink.classList.remove("d-none")
+            } else {
+                loginLink.innerHTML = `<a class="nav-link" href="/login">Login</a>`
+            }
+            loginLink.classList.remove("d-none")
+        })
+
+        function logout() {
+            localStorage.removeItem("token");
+            localStorage.removeItem("token_expiry");
+            location.href = "/login";
+        }
+    </script>
     {{block "js" .}}
     {{end}}
   </body>
