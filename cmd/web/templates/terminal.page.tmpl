@@ -15,7 +15,7 @@
 <hr>
 
 <div class="alert alert-danger text-center d-none" id="card-messages"></div>
-<form action="/terminal-payment-successful" method="post" name="payment_form" id="payment_form"
+<form action="" method="post" name="payment_form" id="payment_form"
     class="d-block needs-validation payment-form" autocomplete="off" novalidate>
     <div class="mb-3">
         <label for="charge_amount" class="form-label">Amount</label>
@@ -50,19 +50,206 @@
     <input type="hidden" name="payment_amount" id="payment_amount">
     <input type="hidden" name="payment_currency" id="payment_currency">
 </form>
+
+<div class="row">
+    <div class="col-md-6 offset-md-3 d-none" id="receipt">
+        <h2 class="mt-5">Virtual Terminal Payment Successful</h2>
+        <hr>
+        <p>Customer's Name: <span id="transaction_customer_name"></span></p>
+        <p>Customer's Email: <span id="transaction_customer_email"></span></p>
+        <p>Payment Method: <span id="transaction_payment_method"></span></p>
+        <p>Payment Amount: <span id="transaction_amount"></span></p>
+        <p>Payment Currency: <span id="transaction_currency"></span></p>
+        <p>Last Four: <span id="transaction_last_four"></span></p>
+        <p>Bank Return Code: <span id="transaction_bank_return_code"></span></p>
+        <p>Expiry Date: <span id="transaction_expiry_date"></span></p>
+
+        <p>
+            <a class="btn btn-primary" href="/pay-terminal">Make New Payment</a>
+        </p>
+    </div>
+</div>
 {{end}}
 
 {{define "js"}}
+<script src="https://js.stripe.com/v3/"></script>
 <script>
-document.getElementById("charge_amount").addEventListener('change', function(event){
-    value = event.target.value
-    amountInput = document.getElementById("amount")
-    if (value !== "") {
-        amountInput.value = parseInt((value * 100), 10);
-    } else {
-        amountInput.value = 0;
-    }
-});
+    document.getElementById("charge_amount").addEventListener('change', function(event){
+        const value = event.target.value
+        let amountInput = document.getElementById("amount")
+        if (value !== "") {
+            amountInput.value = parseInt((value * 100), 10);
+        } else {
+            amountInput.value = 0;
+        }
+    });
 </script>
-{{template "stripe-js" .}}
+<script>
+    let card, stripe;
+    const cardMessages = document.getElementById("card-messages")
+    const payButton = document.getElementById("pay-button")
+    const processing = document.getElementById("processing-payment")
+    stripe = Stripe({{index .StringMap "publishable_key"}});
+    function showProcessingSpinner(toShow=false) {
+        if (toShow) {
+            processing.classList.remove("d-none")
+        } else if (!toShow) {
+            processing.classList.add("d-none")
+        }
+    }
+
+    function hidePayButton() {
+        payButton.classList.add("d-none")
+        showProcessingSpinner(true)
+    }
+
+    function showPayButton() {
+        payButton.classList.remove("d-none")
+        showProcessingSpinner(false)
+    }
+
+    function showCardError(msg) {
+        cardMessages.classList.add("alert-danger")
+        cardMessages.classList.remove("alert-success")
+        cardMessages.classList.remove("d-none")
+        cardMessages.innerText = msg
+    }
+
+    function showCardSuccess() {
+        cardMessages.classList.remove("alert-danger")
+        cardMessages.classList.add("alert-success")
+        cardMessages.classList.remove("d-none")
+        cardMessages.innerText = "Transaction Successful"
+    }
+
+    function val(){
+        let form = document.getElementById("payment_form")
+        if (form.checkValidity() === false) {
+            this.event.preventDefault()
+            this.event.stopPropagation()
+            form.classList.add("was-validated")
+            return
+        }
+        form.classList.add("was-validated")
+        hidePayButton()
+
+        let amountToCharge = document.getElementById("amount").value
+        let payload = {
+            amount: amountToCharge,
+            currency: 'usd',
+        }
+
+        const requestOptions = {
+            method: 'post',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload),
+        }
+
+        fetch("{{.API}}/api/payment-intent", requestOptions)
+            .then(response => response.text())
+            .then(response => {
+                let data;
+                try {
+                    data = JSON.parse(response);
+                    stripe.confirmCardPayment(data.client_secret, {
+                        payment_method: {
+                            card: card,
+                            billing_details: {
+                                name: document.getElementById("cardholder-name").value,
+                            }
+                        }
+                    }).then(function(result) {
+                        if (result.error) {
+                            // something went wrong
+                            showCardError(result.error.message)
+                            showPayButton()
+                        } else if (result.paymentIntent) {
+                            if (result.paymentIntent.status === "succeeded") {
+                                saveTransaction(result);
+                            }
+                        }
+                    })
+                } catch (err) {
+                    console.log(err)
+                    showCardError("Invalid response from payment gateway")
+                    showPayButton()
+                }
+            })
+    }
+    
+    function saveTransaction(result) {
+        const payload = {
+            first_name: "",
+            last_name: "",
+            email: document.getElementById("email").value,
+            amount: parseInt(document.getElementById("amount").value, 10),
+            currency: result.paymentIntent.currency,
+            payment_intent: result.paymentIntent.id,
+            payment_method: result.paymentIntent.payment_method,
+        }
+        const token = localStorage.getItem("token")
+
+        const requestOptions = {
+            method: 'post',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+            },
+            body: JSON.stringify(payload)
+        }
+
+        fetch("{{.API}}/api/admin/terminal-payment-successful", requestOptions)
+        .then(response => response.json())
+        .then(function(data){
+            console.log(data);
+            showProcessingSpinner(false);
+            showCardSuccess();
+
+            document.getElementById("transaction_customer_name").innerHTML = `${data.first_name} ${data.last_name}`.trim();
+            document.getElementById("transaction_customer_email").innerHTML = data.email;
+            document.getElementById("transaction_amount").innerHTML = data.amount;
+            document.getElementById("transaction_payment_method").innerHTML = data.payment_method;
+            document.getElementById("transaction_currency").innerHTML = data.currency;
+            document.getElementById("transaction_last_four").innerHTML = data.last_four;
+            document.getElementById("transaction_bank_return_code").innerHTML = data.bank_return_code;
+            document.getElementById("transaction_expiry_date").innerHTML = `${data.expiry_month}/${data.expiry_year}`;
+
+            document.getElementById("receipt").classList.remove("d-none");
+        })
+
+    }
+    (function() {
+        // create stripe elements
+        const elements = stripe.elements();
+        const style = {
+            base: {
+                fontSize: '16px',
+                lineHeight: '24px',
+            }
+        };
+
+        // create card element
+        card = elements.create('card', {
+            style: style,
+            hidePostalCode: true, 
+        });
+        card.mount('#card-element');
+
+        // check for input errors
+        card.addEventListener('change', function(event) {
+            var errorDiv = document.getElementById("card-errors")
+            if (event.error) {
+                errorDiv.classList.remove('d-none')
+                errorDiv.textContent = event.error.message
+            } else {
+                errorDiv.classList.add('d-none')
+                errorDiv.textContent = ''
+            }
+        })
+    })();
+</script>
 {{end}}

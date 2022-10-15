@@ -249,7 +249,70 @@ func (app *application) CheckAuthentication(w http.ResponseWriter, r *http.Reque
 	}
 	payload := APIResponse{
 		HasError: false,
-		Message: fmt.Sprintf("authenticated user - %s", user.Email),
+		Message:  fmt.Sprintf("authenticated user - %s", user.Email),
 	}
 	app.writeJSON(w, payload, http.StatusOK)
+}
+
+func (app *application) TerminalPaymentSuccessful(w http.ResponseWriter, r *http.Request) {
+	var transactionData struct {
+		FirstName       string `json:"first_name"`
+		LastName        string `json:"last_name"`
+		Email           string `json:"email"`
+		PaymentIntentID string `json:"payment_intent"`
+		PaymentMethodID string `json:"payment_method"`
+		Amount          int    `json:"amount"`
+		Currency        string `json:"currency"`
+		LastFour        string `json:"last_four"`
+		ExpiryMonth     int    `json:"expiry_month"`
+		ExpiryYear      int    `json:"expiry_year"`
+		BankReturnCode  string `json:"bank_return_code"`
+	}
+	err := app.readJSON(w, r, &transactionData)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	payConf := payment.Config{
+		Secret: app.config.stripe.secret,
+		Key:    app.config.stripe.key,
+	}
+	paymentIntent, err := payConf.RetrievePaymentIntent(transactionData.PaymentIntentID)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+	paymentMethod, err := payConf.GetPaymentMethod(transactionData.PaymentMethodID)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	transactionData.LastFour = paymentMethod.Card.Last4
+	transactionData.ExpiryMonth = int(paymentMethod.Card.ExpMonth)
+	transactionData.ExpiryYear = int(paymentMethod.Card.ExpYear)
+	transactionData.BankReturnCode = paymentIntent.Charges.Data[0].ID
+
+	// create new transaction
+	transaction := models.Transaction{
+		Amount:              transactionData.Amount,
+		Currency:            transactionData.Currency,
+		LastFour:            transactionData.LastFour,
+		BankReturnCode:      transactionData.BankReturnCode,
+		PaymentIntent:       transactionData.PaymentIntentID,
+		PaymentMethod:       transactionData.PaymentMethodID,
+		CardExpiryMonth:     transactionData.ExpiryMonth,
+		CardExpiryYear:      transactionData.ExpiryYear,
+		TransactionStatusID: 2,
+		CreatedAt:           time.Now(),
+		UpdatedAt:           time.Now(),
+	}
+	_, err = app.SaveTransaction(transaction)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	app.writeJSON(w, transactionData, http.StatusOK)
 }

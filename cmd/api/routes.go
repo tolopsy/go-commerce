@@ -30,6 +30,7 @@ func (app *application) routes() http.Handler {
 		r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("right here"))
 		})
+		r.Post("/terminal-payment-successful", app.TerminalPaymentSuccessful)
 	})
 	return mux
 }
