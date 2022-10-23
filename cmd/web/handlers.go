@@ -253,12 +253,6 @@ func (app *application) BronzePlanReceipt(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (app *application) LoginPage(w http.ResponseWriter, r *http.Request) {
-	if err := app.renderTemplate(w, r, "login", &templateData{}); err != nil {
-		app.errorLog.Println(err)
-	}
-}
-
 // SaveCustomer saves customer and returns customer's id
 func (app *application) SaveCustomer(firstName, lastName, email string) (int, error) {
 	customer := models.Customer{
@@ -291,4 +285,39 @@ func (app *application) SaveOrder(order models.Order) (int, error) {
 		return 0, err
 	}
 	return order_id, nil
+}
+
+func (app *application) LoginPage(w http.ResponseWriter, r *http.Request) {
+	if err := app.renderTemplate(w, r, "login", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) PostLoginPage(w http.ResponseWriter, r *http.Request) {
+	app.SessionManager.RenewToken(r.Context())
+
+	if err := r.ParseForm(); err != nil {
+		app.errorLog.Println(err)
+		return
+	}
+
+	email := r.Form.Get("email")
+	password := r.Form.Get("password")
+
+	id, err := app.DB.Authenticate(email, password)
+	if err != nil {
+		app.errorLog.Println(err)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	app.SessionManager.Put(r.Context(), "userID", id)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (app *application) Logout(w http.ResponseWriter, r *http.Request) {
+	app.SessionManager.Destroy(r.Context())
+	app.SessionManager.RenewToken(r.Context())
+
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }

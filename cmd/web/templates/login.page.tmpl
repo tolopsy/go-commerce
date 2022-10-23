@@ -8,7 +8,7 @@
 <h2 class="mt-3 text-center">Login</h2>
 <hr>
  <div class="alert alert-danger text-center d-none" id="login-messages"></div>
- <form action="" method="post" name="login_form" id="login_form"
+ <form action="/login" method="post" name="login_form" id="login_form"
         class="d-block needs-validation login-form" autocomplete="off" novalidate>
     <div class="mb-3">
         <label for="email" class="form-label">Email</label>
@@ -75,7 +75,8 @@
                 localStorage.setItem('token', data.authentication_token.token)
                 localStorage.setItem('token_expiry', data.authentication_token.expiry)
                 showSuccess()
-                location.href = "/"
+                // location.href = "/"
+                document.getElementById("login_form").submit()
             } else {
                 showError(data.message)
             }
