@@ -14,6 +14,7 @@ import (
 	"go-commerce/internal/models"
 
 	"github.com/alexedwards/scs/v2"
+	"github.com/alexedwards/scs/mysqlstore"
 )
 
 const name = "card-pay-web"
@@ -84,6 +85,7 @@ func main() {
 	// initialize session management
 	sessionManager = scs.New()
 	sessionManager.Lifetime = 24 * time.Hour
+	sessionManager.Store = mysqlstore.New(conn)
 
 	templateCache := make(map[string]*template.Template)
 
