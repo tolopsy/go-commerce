@@ -24,6 +24,7 @@ func (app *application) routes() http.Handler {
 	mux.Post("/api/create-customer-and-subscribe-to-plan", app.CreateCustomerAndSubscribeToPlan)
 	mux.Post("/api/authenticate", app.CreateAuthToken)
 	mux.Post("/api/is-authenticated", app.CheckAuthentication)
+	mux.Post("/api/forgot-password", app.SendPasswordResetEmail)
 
 	mux.Route("/api/admin", func(r chi.Router) {
 		r.Use(app.Auth)

@@ -316,3 +316,32 @@ func (app *application) TerminalPaymentSuccessful(w http.ResponseWriter, r *http
 
 	app.writeJSON(w, transactionData, http.StatusOK)
 }
+
+func (app *application) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		Email string `json:"email"`
+	}
+
+	if err := app.readJSON(w, r, &payload); err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	var data struct {
+		Link string
+	}
+	data.Link = "https://unilag.edu.ng/"
+
+	// send mail
+	err := app.SendMail("info@widgets.com", "lanre.toluwa@gmail.com", "Password Reset Email", "password_reset", data)
+	if err != nil {
+		app.errorLog.Println(err)
+		app.badRequest(w, err)
+		return
+	}
+
+	resp := APIResponse{
+		HasError: false,
+	}
+	app.writeJSON(w, resp, http.StatusCreated)
+}
