@@ -288,3 +288,14 @@ func (w *DBWrapper) Authenticate(email, password string) (int, error) {
 
 	return id, nil
 }
+
+func (w *DBWrapper) UpdatePasswordForUser(u User, hash string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	_, err := w.DB.ExecContext(ctx, `update users set password = ? where id = ?`, hash, u.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
