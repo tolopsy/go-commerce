@@ -13,8 +13,8 @@ import (
 	"go-commerce/internal/driver"
 	"go-commerce/internal/models"
 
-	"github.com/alexedwards/scs/v2"
 	"github.com/alexedwards/scs/mysqlstore"
+	"github.com/alexedwards/scs/v2"
 )
 
 const name = "card-pay-web"
@@ -33,6 +33,8 @@ type config struct {
 	db struct {
 		dsn string
 	}
+	secretKey string
+	frontend  string
 }
 
 type application struct {
@@ -66,6 +68,8 @@ func main() {
 	flag.IntVar(&conf.port, "port", 8000, "Server port to listen flag on (default: 8000)")
 	flag.StringVar(&conf.env, "env", "development", "Application environment (default: development) {development|production}")
 	flag.StringVar(&conf.api, "api", "http://localhost:9000", "URL to API (default: http://localhost:9000)")
+	flag.StringVar(&conf.secretKey, "secretkey", "qsdhytewnbc8rlopwe904hg7epqzas21", "Secret Key")
+	flag.StringVar(&conf.frontend, "frontend", "http://localhost:8000", "Frontend URL")
 
 	flag.Parse()
 
