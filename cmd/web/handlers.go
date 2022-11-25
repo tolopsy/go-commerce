@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go-commerce/internal/encryption"
 	"go-commerce/internal/models"
 	"go-commerce/internal/payment"
 	"go-commerce/internal/urlsigner"
@@ -343,9 +344,16 @@ func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		app.errorLog.Println("Link expired")
 		return
 	}
-	
+
+	encryptor := encryption.NewEncryptor([]byte(app.config.secretKey))
+	encryptedEmail, err := encryptor.Encrypt(r.URL.Query().Get("email"))
+	if err != nil {
+		app.errorLog.Println("Encryption failed")
+		return
+	}
+
 	data := make(map[string]interface{})
-	data["email"] = r.URL.Query().Get("email")
+	data["email"] = encryptedEmail
 
 	if err := app.renderTemplate(w, r, "reset-password", &templateData{Data: data}); err != nil {
 		app.errorLog.Println(err)

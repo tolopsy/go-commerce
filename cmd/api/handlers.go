@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"go-commerce/internal/encryption"
 	"go-commerce/internal/models"
 	"go-commerce/internal/payment"
 	"go-commerce/internal/urlsigner"
@@ -368,7 +369,14 @@ func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := app.DB.GetUserByEmail(payload.Email)
+	encryptor := encryption.NewEncryptor([]byte(app.config.secretKey))
+	realEmail, err := encryptor.Decrypt(payload.Email)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	user, err := app.DB.GetUserByEmail(realEmail)
 	if err != nil {
 		app.badRequest(w, err)
 		return
