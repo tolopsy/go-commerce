@@ -63,7 +63,7 @@ func main() {
 
 	flag.IntVar(&conf.port, "port", 9000, "Server port to listen flag on (default: 9000)")
 	flag.StringVar(&conf.env, "env", "development", "Application environment (default: development) {development|staging|production}")
-	flag.StringVar(&conf.secretKey, "secretkey", "thisisatestsecretkey", "Secret Key")
+	flag.StringVar(&conf.secretKey, "secretkey", "qsdhytewnbc8rlopwe904hg7epqzas21", "Secret Key")
 	flag.StringVar(&conf.frontend, "frontend", "http://localhost:8000", "Frontend URL")
 
 	flag.Parse()
