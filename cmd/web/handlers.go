@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"go-commerce/internal/models"
 	"go-commerce/internal/payment"
+	"go-commerce/internal/urlsigner"
 	"net/http"
 	"strconv"
 	"time"
@@ -322,9 +324,30 @@ func (app *application) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-
 func (app *application) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	if err := app.renderTemplate(w, r, "forgot-password", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	fullURL := fmt.Sprintf("%s%s", app.config.frontend, r.RequestURI)
+	signer := urlsigner.NewSigner([]byte(app.config.secretKey))
+
+	if !signer.VerifyToken(fullURL) {
+		app.errorLog.Println("invalid url: tampering detected")
+		return
+	}
+
+	if signer.Expired(fullURL, 60) {
+		app.errorLog.Println("Link expired")
+		return
+	}
+	
+	data := make(map[string]interface{})
+	data["email"] = r.URL.Query().Get("email")
+
+	if err := app.renderTemplate(w, r, "reset-password", &templateData{Data: data}); err != nil {
 		app.errorLog.Println(err)
 	}
 }
