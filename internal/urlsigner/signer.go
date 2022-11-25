@@ -12,6 +12,11 @@ type Signer struct {
 	secret []byte
 }
 
+func NewSigner(secret []byte) *Signer {
+	return &Signer{
+		secret: secret,
+	}
+}
 func (s *Signer) GenerateTokenFromString(unsignedURL string) string {
 	var urlToSign string
 	crypt := goalone.New(s.secret, goalone.Timestamp)
