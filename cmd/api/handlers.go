@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 
 	"go-commerce/internal/models"
 	"go-commerce/internal/payment"
+	"go-commerce/internal/urlsigner"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stripe/stripe-go/v72"
@@ -327,13 +329,21 @@ func (app *application) SendPasswordResetEmail(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	if _, err := app.DB.GetUserByEmail(payload.Email); err != nil {
+		app.badRequest(w, errors.New("no matching email found"))
+		return
+	}
+
+	link := fmt.Sprintf("%s/reset-password?email=%s", app.config.frontend, payload.Email)
+	signer := urlsigner.NewSigner([]byte(app.config.secretKey))
+
 	var data struct {
 		Link string
 	}
-	data.Link = "https://unilag.edu.ng/"
+	data.Link = signer.GenerateTokenFromString(link)
 
 	// send mail
-	err := app.SendMail("info@widgets.com", "lanre.toluwa@gmail.com", "Password Reset Email", "password_reset", data)
+	err := app.SendMail("info@widgets.com", payload.Email, "Password Reset Email", "password_reset", data)
 	if err != nil {
 		app.errorLog.Println(err)
 		app.badRequest(w, err)
