@@ -33,6 +33,7 @@ func (app *application) routes() http.Handler {
 			w.Write([]byte("right here"))
 		})
 		r.Post("/terminal-payment-successful", app.TerminalPaymentSuccessful)
+		r.Post("/all-sales", app.AllSales)
 	})
 	return mux
 }
