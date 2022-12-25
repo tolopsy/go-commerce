@@ -156,7 +156,7 @@
                         .then(function(data){
                             console.log(data)
                             showProcessingSpinner(false)
-                            if (data.ok) {
+                            if (!data.has_error) {
                                 showCardSuccess()
                                 // set hidden vars
                                 // submit form
