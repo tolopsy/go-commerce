@@ -1,0 +1,64 @@
+{{template "base" .}}
+
+{{define "title"}}
+    Sale
+{{end}}
+
+{{define "content"}}
+    <h2 class="mt-5">Sale</h2>
+    <hr>
+    <div>
+        <strong>Order no:</strong> <span id="order-no"></span><br>
+        <strong>Customer:</strong> <span id="customer"></span><br>
+        <strong>Product:</strong> <span id="product"></span><br>
+        <strong>Quantity:</strong> <span id="quantity"></span><br>
+        <strong>Amount:</strong> <span id="amount"></span><br>
+    </div>
+    <hr>
+    <a class="btn btn-info" href="/admin/all-sales">Back to all sales</a>
+    <a class="btn btn-warning" href="#!">Refund Order</a>
+{{end}}
+
+{{define "js"}}
+    <script>
+        let token = localStorage.getItem("token");
+        let id = window.location.pathname.split("/").pop()
+
+        const requestOptions = {
+            method: 'post',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+            },
+        }
+
+        fetch("{{.API}}/api/admin/get-sale/" + id, requestOptions)
+        .then(response => response.json())
+        .then(function (data) {
+            let node = document.getElementById("order-no");
+            let item = document.createTextNode(data.id);
+            node.appendChild(item);
+
+            node = document.getElementById("customer");
+            item = document.createTextNode(`${data.customer.first_name} ${data.customer.last_name}`)
+            node.appendChild(item);
+
+            node = document.getElementById("product");
+            item = document.createTextNode(data.widget.name);
+            node.appendChild(item);
+
+            node = document.getElementById("quantity");
+            item = document.createTextNode(data.quantity);
+            node.appendChild(item);
+
+            node = document.getElementById("amount");
+            item = document.createTextNode(formatCurrency(data.transaction.amount));
+            node.appendChild(item);
+        })
+
+        function formatCurrency(amount) {
+            return parseFloat(amount/100).toLocaleString("en-US", {style: "currency", currency: "USD"})
+        }
+    </script>
+{{end}}
