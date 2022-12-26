@@ -401,10 +401,49 @@ func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) AllSales(w http.ResponseWriter, r *http.Request){
-	allSales, err := app.DB.GetAllOrders()
+	allSales, err := app.DB.GetAllSaless()
 	if err != nil {
 		app.badRequest(w, err)
 		return
 	}
 	app.writeJSON(w, allSales, http.StatusOK)
+}
+
+func (app *application) AllSubscriptions(w http.ResponseWriter, r *http.Request){
+	allSales, err := app.DB.GetAllSubscriptions()
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+	app.writeJSON(w, allSales, http.StatusOK)
+}
+
+func (app *application) GetSale(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+	order, err := app.DB.GetSaleByID(id)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+	app.writeJSON(w, order, http.StatusOK)
+}
+
+func (app *application) GetSubscription(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+	order, err := app.DB.GetSubscriptionByID(id)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+	app.writeJSON(w, order, http.StatusOK)
 }

@@ -34,6 +34,9 @@ func (app *application) routes() http.Handler {
 		})
 		r.Post("/terminal-payment-successful", app.TerminalPaymentSuccessful)
 		r.Post("/all-sales", app.AllSales)
+		r.Post("/all-subscriptions", app.AllSubscriptions)
+		r.Post("/get-sale/{id}", app.GetSale)
+		r.Post("/get-subscription/{id}", app.GetSubscription)
 	})
 	return mux
 }
