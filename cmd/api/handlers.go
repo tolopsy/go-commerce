@@ -395,12 +395,12 @@ func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	resp := APIResponse{
 		HasError: false,
-		Message: "password changed",
+		Message:  "password changed",
 	}
 	app.writeJSON(w, resp, http.StatusCreated)
 }
 
-func (app *application) AllSales(w http.ResponseWriter, r *http.Request){
+func (app *application) AllSales(w http.ResponseWriter, r *http.Request) {
 	allSales, err := app.DB.GetAllSaless()
 	if err != nil {
 		app.badRequest(w, err)
@@ -409,7 +409,7 @@ func (app *application) AllSales(w http.ResponseWriter, r *http.Request){
 	app.writeJSON(w, allSales, http.StatusOK)
 }
 
-func (app *application) AllSubscriptions(w http.ResponseWriter, r *http.Request){
+func (app *application) AllSubscriptions(w http.ResponseWriter, r *http.Request) {
 	allSales, err := app.DB.GetAllSubscriptions()
 	if err != nil {
 		app.badRequest(w, err)
@@ -446,4 +446,37 @@ func (app *application) GetSubscription(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	app.writeJSON(w, order, http.StatusOK)
+}
+
+func (app *application) RefundCharge(w http.ResponseWriter, r *http.Request) {
+	var chargeToRefund struct {
+		ID            int    `json:"id"`
+		PaymentIntent string `json:"payment_intent"`
+		Amount        int    `json:"amount"`
+		Currency      string `json:"currency"`
+	}
+
+	err := app.readJSON(w, r, &chargeToRefund)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	payConf := payment.Config{
+		Secret:   app.config.stripe.secret,
+		Key:      app.config.stripe.key,
+		Currency: chargeToRefund.Currency,
+	}
+
+	err = payConf.Refund(chargeToRefund.PaymentIntent, chargeToRefund.Amount)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	response := APIResponse{
+		HasError: false,
+		Message: "Charge refunded",
+	}
+	app.writeJSON(w, response, http.StatusOK)
 }
