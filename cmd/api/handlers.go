@@ -474,6 +474,13 @@ func (app *application) RefundCharge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = app.DB.UpdateOrderStatus(chargeToRefund.ID, models.OrderRefunded)
+	if err != nil {
+		app.badRequest(w, errors.New("charge has been refunded but could not update in database"))
+		app.errorLog.Println(err)
+		return
+	}
+
 	response := APIResponse{
 		HasError: false,
 		Message: "Charge refunded",

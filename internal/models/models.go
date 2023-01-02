@@ -42,8 +42,8 @@ type Widget struct {
 
 const (
 	OrderCleared   = 1
-	OrderRefunded  = 1
-	OrderCancelled = 1
+	OrderRefunded  = 2
+	OrderCancelled = 3
 )
 
 // Order is the type for orders
@@ -548,4 +548,18 @@ func (m *DBWrapper) GetSubscriptionByID(id int) (Order, error) {
 	}
 
 	return o, nil
+}
+
+
+func (m *DBWrapper) UpdateOrderStatus(id, statusID int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	statement := "update orders set status_id = ? where id = ?"
+	_, err := m.DB.ExecContext(ctx, statement, statusID, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
