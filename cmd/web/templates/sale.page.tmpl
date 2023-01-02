@@ -6,6 +6,8 @@
 
 {{define "content"}}
     <h2 class="mt-5">Sale</h2>
+    <span id="refunded-badge" class="badge bg-danger d-none">Refunded</span>
+    <span id="charged-badge" class="badge bg-success d-none">Charged</span>
     <hr>
     <div>
         <strong>Order no:</strong> <span id="order-no"></span><br>
@@ -16,7 +18,7 @@
     </div>
     <hr>
     <a class="btn btn-info" href="/admin/all-sales">Back to all sales</a>
-    <a id="refund-btn" class="btn btn-warning" href="#!">Refund Order</a>
+    <a id="refund-btn" class="btn btn-warning d-none" href="#!">Refund Order</a>
 
     <input id="payment-intent" type="hidden" value="" />
     <input id="currency" type="hidden" value="" />
@@ -65,6 +67,16 @@
                 document.getElementById("payment-intent").value = data.transaction.payment_intent
                 document.getElementById("charge-amount").value = data.transaction.amount
                 document.getElementById("currency").value = data.transaction.currency
+
+                if (data.status_id === 1) {
+                    document.getElementById("refunded-badge").classList.add("d-none")
+                    document.getElementById("charged-badge").classList.remove("d-none")
+                    document.getElementById("refund-btn").classList.remove("d-none")
+                } else if (data.status_id === 2) {
+                    document.getElementById("charged-badge").classList.add("d-none")
+                    document.getElementById("refund-btn").classList.add("d-none")
+                    document.getElementById("refunded-badge").classList.remove("d-none")
+                }
             })
         })
 
@@ -101,10 +113,17 @@
                     .then(function(data) {
                         console.log(data)
                         if (data.has_error === false) {
+                            document.getElementById("refund-btn").classList.add("d-none")
                             Swal.fire(
                                 'Refunded!',
                                 'This order has been refunded successfully.',
                                 'success'
+                            )
+                        } else if (data.has_error === true) {
+                            Swal.fire(
+                                "Error occured during refund",
+                                data.message,
+                                "error"
                             )
                         }
                     })
