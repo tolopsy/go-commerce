@@ -16,45 +16,101 @@
     </div>
     <hr>
     <a class="btn btn-info" href="/admin/all-sales">Back to all sales</a>
-    <a class="btn btn-warning" href="#!">Refund Order</a>
+    <a id="refund-btn" class="btn btn-warning" href="#!">Refund Order</a>
+
+    <input id="payment-intent" type="hidden" value="" />
+    <input id="currency" type="hidden" value="" />
+    <input id="charge-amount" type="hidden" value="" />
 {{end}}
 
 {{define "js"}}
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         let token = localStorage.getItem("token");
         let id = window.location.pathname.split("/").pop()
+        document.addEventListener("DOMContentLoaded", function() {
+            const requestOptions = {
+                method: 'post',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token,
+                },
+            }
 
-        const requestOptions = {
-            method: 'post',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token,
-            },
-        }
+            fetch("{{.API}}/api/admin/get-sale/" + id, requestOptions)
+            .then(response => response.json())
+            .then(function (data) {
+                console.log(data)
+                let node = document.getElementById("order-no");
+                let item = document.createTextNode(data.id);
+                node.appendChild(item);
 
-        fetch("{{.API}}/api/admin/get-sale/" + id, requestOptions)
-        .then(response => response.json())
-        .then(function (data) {
-            let node = document.getElementById("order-no");
-            let item = document.createTextNode(data.id);
-            node.appendChild(item);
+                node = document.getElementById("customer");
+                item = document.createTextNode(`${data.customer.first_name} ${data.customer.last_name}`)
+                node.appendChild(item);
 
-            node = document.getElementById("customer");
-            item = document.createTextNode(`${data.customer.first_name} ${data.customer.last_name}`)
-            node.appendChild(item);
+                node = document.getElementById("product");
+                item = document.createTextNode(data.widget.name);
+                node.appendChild(item);
 
-            node = document.getElementById("product");
-            item = document.createTextNode(data.widget.name);
-            node.appendChild(item);
+                node = document.getElementById("quantity");
+                item = document.createTextNode(data.quantity);
+                node.appendChild(item);
 
-            node = document.getElementById("quantity");
-            item = document.createTextNode(data.quantity);
-            node.appendChild(item);
+                node = document.getElementById("amount");
+                item = document.createTextNode(formatCurrency(data.transaction.amount));
+                node.appendChild(item);
 
-            node = document.getElementById("amount");
-            item = document.createTextNode(formatCurrency(data.transaction.amount));
-            node.appendChild(item);
+                document.getElementById("payment-intent").value = data.transaction.payment_intent
+                document.getElementById("charge-amount").value = data.transaction.amount
+                document.getElementById("currency").value = data.transaction.currency
+            })
+        })
+
+        document.getElementById("refund-btn").addEventListener("click", function() {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to undo this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Refund'
+                }).then((result) => {
+                if (result.isConfirmed) {
+                    let payload = {
+                        id: parseInt(id, 10),
+                        payment_intent: document.getElementById("payment-intent").value,
+                        amount: parseInt(document.getElementById("charge-amount").value, 10),
+                        currency: document.getElementById("currency").value
+                    }
+
+                    const requestOptions = {
+                        method: 'post',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token,
+                        },
+                        body: JSON.stringify(payload)
+                    }
+
+                    fetch("{{.API}}/api/admin/refund", requestOptions)
+                    .then(response => response.json())
+                    .then(function(data) {
+                        console.log(data)
+                        if (data.has_error === false) {
+                            Swal.fire(
+                                'Refunded!',
+                                'This order has been refunded successfully.',
+                                'success'
+                            )
+                        }
+                    })
+                    
+                }
+            })
         })
 
         function formatCurrency(amount) {
