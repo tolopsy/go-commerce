@@ -113,7 +113,10 @@
                     .then(function(data) {
                         console.log(data)
                         if (data.has_error === false) {
+                            document.getElementById("charged-badge").classList.add("d-none")
                             document.getElementById("refund-btn").classList.add("d-none")
+                            document.getElementById("refunded-badge").classList.remove("d-none")
+
                             Swal.fire(
                                 'Refunded!',
                                 'This order has been refunded successfully.',
