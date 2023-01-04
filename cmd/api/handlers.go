@@ -148,6 +148,7 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 			CardExpiryMonth:     payload.ExpiryMonth,
 			CardExpiryYear:      payload.ExpiryYear,
 			PaymentMethod:       payload.PaymentMethod,
+			PaymentIntent:       subscription.ID,
 			TransactionStatusID: models.TransactionCleared,
 			CreatedAt:           time.Now(),
 			UpdatedAt:           time.Now(),
@@ -483,7 +484,7 @@ func (app *application) RefundCharge(w http.ResponseWriter, r *http.Request) {
 
 	response := APIResponse{
 		HasError: false,
-		Message: "Charge refunded",
+		Message:  "Charge refunded",
 	}
 	app.writeJSON(w, response, http.StatusOK)
 }
