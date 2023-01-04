@@ -133,6 +133,20 @@ func (c *Config) Refund(paymentIntent string, amount int) error {
 	return nil
 }
 
+func (c *Config) CancelSubscription(subscriptionID string) error {
+	stripe.Key = c.Secret
+	
+	params := &stripe.SubscriptionParams{
+		CancelAtPeriodEnd: stripe.Bool(true),
+	}
+
+	_, err := sub.Update(subscriptionID, params)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func stripeCardErrorMessage(code stripe.ErrorCode) string {
 	var msg string
 	switch code {
