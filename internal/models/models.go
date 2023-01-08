@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
 	"strings"
 	"time"
 
@@ -451,7 +452,7 @@ func (m *DBWrapper) GetAllSalesPaginated(pageSize, page int) ([]*Order, int, int
 		return nil, 0, 0, err
 	}
 
-	lastPage := totalSales / pageSize
+	lastPage := int(math.Ceil(float64(totalSales) / float64(pageSize)))
 
 	return orders, totalSales, lastPage, nil
 }
