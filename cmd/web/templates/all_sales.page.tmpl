@@ -21,58 +21,104 @@
 
         </tbody>
     </table>
+
+    <nav>
+    <ul id="paginator" class="pagination">
+    </ul>
+    </nav>
 {{end}}
 
 {{define "js"}}
     <script>
-        let token = localStorage.getItem("token");
-        let tbody = document.getElementById("sales-table").getElementsByTagName("tbody")[0];
+        let page = 1
+        let pageSize = 3
 
-        const requestOptions = {
-            method: 'post',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token,
-            },
-        }
+        function renderPaginator(pages, curPage) {
+            const paginator = document.getElementById("paginator")
 
-        fetch("{{.API}}/api/admin/all-sales", requestOptions)
-        .then(response => response.json())
-        .then(function (data) {
-            if (data) {
-                data.forEach(function(i) {
-                    let newRow = tbody.insertRow();
-                    let newCell = newRow.insertCell();
+            let html = `<li class="page-item"><a href="#!" class="page-link pager" data-page="${curPage - 1}">&lt;</a></li>`;
 
-                    newCell.innerHTML = `<a href="/admin/sales/${i.id}">Order ${i.id}</a>`
+            for (var i = 0; i <= pages; i++) {
+                html += `<li class="page-item"><a href="#!" class="page-link pager" data-page="${i + 1}">${i+1}</a></li>`;
+            }
 
-                    newCell = newRow.insertCell();
-                    let item = document.createTextNode(`${i.customer.last_name}, ${i.customer.first_name}`);
-                    newCell.appendChild(item);
+            html += `<li class="page-item"><a href="#!" class="page-link pager" data-page="${curPage + 1}">&gt;</a></li>`;
+            paginator.innerHTML = html
 
-                    newCell = newRow.insertCell();
-                    item = document.createTextNode(i.widget.name);
-                    newCell.appendChild(item);
-
-                    newCell = newRow.insertCell();
-                    item = document.createTextNode(formatCurrency(i.transaction.amount));
-                    newCell.appendChild(item);
-
-                    newCell = newRow.insertCell();
-                    if (i.status_id === 1) {
-                        newCell.innerHTML = `<span class="badge bg-success">Charged</span>`
-                    } else if (i.status_id === 2) {
-                        newCell.innerHTML = `<span class="badge bg-danger">Refunded</span>`
+            pageBtns = document.getElementsByClassName("pager")
+            for (var j = 0; j < pageBtns.length; j++) {
+                pageBtns[j].addEventListener("click", function(evt) {
+                    let desiredPage = evt.target.getAttribute("data-page")
+                    if (desiredPage > 0 && desiredPage <= pages+1) {
+                        updateTable(desiredPage, pageSize)
                     }
                 })
-            } else {
-                let newRow = tbody.insertRow();
-                let newCell = newRow.insertCell();
-                newCell.setAttribute("colspan", 4);
-                let item = document.createTextNode("No data available")
-                newCell.appendChild(item)
             }
+        }
+
+        function updateTable(currentPage, salesPerPage) {
+            let token = localStorage.getItem("token");
+            let tbody = document.getElementById("sales-table").getElementsByTagName("tbody")[0];
+            tbody.innerHTML = "";
+
+            let payload = {
+                page: parseInt(currentPage, 10),
+                page_size: parseInt(salesPerPage, 10),
+            }
+
+            const requestOptions = {
+                method: 'post',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token,
+                },
+                body: JSON.stringify(payload)
+            }
+
+            fetch("{{.API}}/api/admin/all-sales", requestOptions)
+            .then(response => response.json())
+            .then(function (data) {
+                sales = data.sales
+                if (sales) {
+                    sales.forEach(function(i) {
+                        let newRow = tbody.insertRow();
+                        let newCell = newRow.insertCell();
+
+                        newCell.innerHTML = `<a href="/admin/sales/${i.id}">Order ${i.id}</a>`
+
+                        newCell = newRow.insertCell();
+                        let item = document.createTextNode(`${i.customer.last_name}, ${i.customer.first_name}`);
+                        newCell.appendChild(item);
+
+                        newCell = newRow.insertCell();
+                        item = document.createTextNode(i.widget.name);
+                        newCell.appendChild(item);
+
+                        newCell = newRow.insertCell();
+                        item = document.createTextNode(formatCurrency(i.transaction.amount));
+                        newCell.appendChild(item);
+
+                        newCell = newRow.insertCell();
+                        if (i.status_id === 1) {
+                            newCell.innerHTML = `<span class="badge bg-success">Charged</span>`
+                        } else if (i.status_id === 2) {
+                            newCell.innerHTML = `<span class="badge bg-danger">Refunded</span>`
+                        }
+                    })
+                    renderPaginator(data.last_page, currentPage);
+                } else {
+                    let newRow = tbody.insertRow();
+                    let newCell = newRow.insertCell();
+                    newCell.setAttribute("colspan", 5);
+                    let item = document.createTextNode("No data available")
+                    newCell.appendChild(item)
+                }
+            })
+        }
+
+        document.addEventListener("DOMContentLoaded", function(){
+            updateTable(page, pageSize)
         })
         function formatCurrency(amount) {
             return parseFloat(amount/100).toLocaleString("en-US", {style: "currency", currency: "USD"})
