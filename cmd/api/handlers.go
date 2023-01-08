@@ -402,12 +402,31 @@ func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) AllSales(w http.ResponseWriter, r *http.Request) {
-	allSales, err := app.DB.GetAllSaless()
+	var payload struct {
+		Page int `json:"page"`
+		PageSize    int `json:"page_size"`
+	}
+
+	if err := app.readJSON(w, r, &payload); err != nil {
+		app.badRequest(w, err)
+		return
+	}
+	allSales, totalSales, lastPage, err := app.DB.GetAllSalesPaginated(payload.PageSize, payload.Page)
 	if err != nil {
 		app.badRequest(w, err)
 		return
 	}
-	app.writeJSON(w, allSales, http.StatusOK)
+	var paginatedSalesData struct {
+		TotalSales int             `json:"total_sales"`
+		LastPage   int             `json:"last_page"`
+		Sales      []*models.Order `json:"sales"`
+	}
+
+	paginatedSalesData.TotalSales = totalSales
+	paginatedSalesData.LastPage = lastPage
+	paginatedSalesData.Sales = allSales
+
+	app.writeJSON(w, paginatedSalesData, http.StatusOK)
 }
 
 func (app *application) AllSubscriptions(w http.ResponseWriter, r *http.Request) {
