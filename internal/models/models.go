@@ -304,7 +304,7 @@ func (w *DBWrapper) UpdatePasswordForUser(u User, hash string) error {
 	return nil
 }
 
-func (m *DBWrapper) GetAllSaless() ([]*Order, error) {
+func (m *DBWrapper) GetAllSales() ([]*Order, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -369,6 +369,91 @@ func (m *DBWrapper) GetAllSaless() ([]*Order, error) {
 	}
 
 	return orders, nil
+}
+
+func (m *DBWrapper) GetAllSalesPaginated(pageSize, page int) ([]*Order, int, int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	offset := (page - 1) * pageSize
+
+	var orders []*Order
+
+	query := `
+	select
+		o.id, o.widget_id, o.transaction_id, o.customer_id, 
+		o.status_id, o.quantity, o.amount, o.created_at,
+		o.updated_at, w.id, w.name, t.id, t.amount, t.currency,
+		t.last_four, t.expiry_month, t.expiry_year, t.payment_intent,
+		t.bank_return_code, c.id, c.first_name, c.last_name, c.email
+		
+	from
+		orders o
+		left join widgets w on (o.widget_id = w.id)
+		left join transactions t on (o.transaction_id = t.id)
+		left join customers c on (o.customer_id = c.id)
+	where
+		w.is_recurring = 0
+	order by
+		o.created_at desc
+	limit ? offset ?
+	`
+
+	rows, err := m.DB.QueryContext(ctx, query, pageSize, offset)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var o Order
+		err = rows.Scan(
+			&o.ID,
+			&o.WidgetID,
+			&o.TransactionID,
+			&o.CustomerID,
+			&o.StatusID,
+			&o.Quantity,
+			&o.Amount,
+			&o.CreatedAt,
+			&o.UpdatedAt,
+			&o.Widget.ID,
+			&o.Widget.Name,
+			&o.Transaction.ID,
+			&o.Transaction.Amount,
+			&o.Transaction.Currency,
+			&o.Transaction.LastFour,
+			&o.Transaction.CardExpiryMonth,
+			&o.Transaction.CardExpiryYear,
+			&o.Transaction.PaymentIntent,
+			&o.Transaction.BankReturnCode,
+			&o.Customer.ID,
+			&o.Customer.FirstName,
+			&o.Customer.LastName,
+			&o.Customer.Email,
+		)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+		orders = append(orders, &o)
+	}
+
+	query = `
+		select count(o.id) from orders o
+		left join widgets w on (o.widget_id = w.id)
+		where w.is_recurring = 0
+	`
+
+	var totalSales int
+	countSales := m.DB.QueryRowContext(ctx, query)
+	err = countSales.Scan(&totalSales)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	lastPage := totalSales / pageSize
+
+	return orders, totalSales, lastPage, nil
 }
 
 func (m *DBWrapper) GetAllSubscriptions() ([]*Order, error) {
