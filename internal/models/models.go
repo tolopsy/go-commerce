@@ -649,3 +649,107 @@ func (m *DBWrapper) UpdateOrderStatus(id, statusID int) error {
 
 	return nil
 }
+
+func (m *DBWrapper) GetAllUsers() ([]*User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	statement := `
+		select id, first_name, last_name, email, created_at, updated_at
+		from users
+		order by last_name, first_name
+	`
+
+	rows, err := m.DB.QueryContext(ctx, statement)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var users []*User
+	for rows.Next(){
+		var u User
+		err = rows.Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.CreatedAt, &u.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, &u)
+	}
+	return users, nil
+}
+
+func (m *DBWrapper) GetUserById(id int) (User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	statement := `
+		select id, first_name, last_name, email, created_at, updated_at
+		from users
+		where id = ?
+	`
+
+	var u User
+	row := m.DB.QueryRowContext(ctx, statement, id)
+	err := row.Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.CreatedAt, &u.UpdatedAt)
+	if err != nil {
+		return u, err
+	}
+	return u, nil
+}
+
+func (m *DBWrapper) EditUser(u User) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	statement := `
+		update users set
+			first_name = ?,
+			last_name = ?,
+			email = ?,
+			updated_at = ?
+		where id = ?
+	`
+	_, err := m.DB.ExecContext(ctx, statement, u.FirstName, u.LastName, u.Email, time.Now(), u.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *DBWrapper) AddUser(u User, hash string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	statement := `
+		insert into users (first_name, last_name, email, password, created_at, updated_at)
+		values (?, ?, ?, ?, ?, ?)
+	`
+
+	_, err := m.DB.ExecContext(ctx, statement,
+		u.FirstName,
+		u.LastName,
+		u.Email,
+		hash,
+		time.Now(),
+		time.Now(),
+	)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *DBWrapper) DeleteUser(id int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	statement := `delete from users where id = ?`
+	_, err := m.DB.ExecContext(ctx, statement, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
