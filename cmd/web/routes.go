@@ -19,6 +19,8 @@ func (app *application) routes() http.Handler {
 		r.Get("/all-subscriptions", app.AllSubscriptions)
 		r.Get("/sales/{id}", app.ShowSale)
 		r.Get("/subscriptions/{id}", app.ShowSubscription)
+		r.Get("/all-users", app.AllUsers)
+		r.Get("/all-users/{id}", app.OneUser)
 	})
 	
 	// mux.Post("/terminal-payment-successful", app.TerminalPaymentSuccessful)
