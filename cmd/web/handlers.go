@@ -395,3 +395,9 @@ func (app *application) OneUser(w http.ResponseWriter, r *http.Request) {
 		app.errorLog.Println(err)
 	}
 }
+
+func (app *application) AddUser(w http.ResponseWriter, r *http.Request) {
+	if err := app.renderTemplate(w, r, "add-user", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}

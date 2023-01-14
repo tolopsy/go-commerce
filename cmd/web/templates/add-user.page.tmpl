@@ -1,0 +1,108 @@
+{{template "base" .}}
+
+{{define "title"}}
+    Add User
+{{end}}
+
+{{define "content"}}
+    <h2 class="mt-5">Add User</h2>
+    <hr>
+    <form method="post" action="" name="user_form" id="user_form">
+
+    <div class="mb-3">
+        <label for="first_name" class="form-label">First Name</label>
+        <input type="text" class="form-control" id="first_name"
+            name="first_name" autocomplete="first_name-new" required
+        />
+    </div>
+    <div class="mb-3">
+        <label for="last_name" class="form-label">Last Name</label>
+        <input type="text" class="form-control" id="last_name"
+            name="last_name" autocomplete="last_name-new" required
+        />
+    </div>
+    <div class="mb-3">
+        <label for="email" class="form-label">Email Address</label>
+        <input type="email" class="form-control" id="email"
+            name="email" autocomplete="email-new" required
+        />
+    </div>
+    <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password"
+            name="password" required
+        />
+    </div>
+    <div class="mb-3">
+        <label for="verify_password" class="form-label">Verify Password</label>
+        <input type="password" class="form-control" id="verify_password"
+            name="verify_password" required
+        />
+    </div>
+
+    <hr>
+
+    <div class="float-start">
+        <a class="btn btn-primary" href="javascript:void(0);" onclick="save();" id="save_btn">Save Changes</a>
+        <a class="btn btn-warning" href="/admin/all-users" id="cancel_btn">Cancel</a>
+    </div>
+
+    <div class="clearfix"></div>
+
+    </form>
+{{end}}
+
+{{define "js"}}
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    let token = localStorage.getItem("token");
+    let id = window.location.pathname.split("/").pop();
+    deleteBtn = document.getElementById("delete_btn");
+
+    function save() {
+        const form = document.getElementById("user_form");
+        if (form.checkValidity() === false) {
+            this.event.preventDefault();
+            this.event.stopPropagation();
+            form.classList.add("was-validated");
+            return
+        }
+        form.classList.add("was-validated");
+
+        const password = getElementValue("password")
+
+        if (password !== getElementValue("verify_password")) {
+            Swal.fire("Password do not match");
+            return
+        }
+
+        const payload = {
+            first_name: getElementValue("first_name"),
+            last_name: getElementValue("last_name"),
+            email: getElementValue("email"),
+            password: password,
+        }
+
+        let requestOptions = {
+            method: 'post',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+            },
+            body: JSON.stringify(payload)
+        }
+
+        fetch("{{.API}}/api/admin/all-users/add", requestOptions)
+        .then(response => response.json())
+        .then(function(data) {
+            if (data.has_error) {
+                Swal.fire("Error: " + data.message)
+            } else {
+                location.href = "/admin/all-users"
+            }
+        })
+    }
+
+</script>
+{{end}}
