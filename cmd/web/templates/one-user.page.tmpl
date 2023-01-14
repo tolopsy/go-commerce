@@ -30,20 +30,20 @@
     <div class="mb-3">
         <label for="password" class="form-label">Password</label>
         <input type="password" class="form-control" id="password"
-            name="password" required
+            name="password"
         />
     </div>
     <div class="mb-3">
         <label for="verify_password" class="form-label">Verify Password</label>
         <input type="password" class="form-control" id="verify_password"
-            name="verify_password" required
+            name="verify_password"
         />
     </div>
 
     <hr>
 
     <div class="float-start">
-        <a class="btn btn-primary" href="javascript:void(0);" id="save_btn">Save Changes</a>
+        <a class="btn btn-primary" href="javascript:void(0);" onclick="save();" id="save_btn">Save Changes</a>
         <a class="btn btn-warning" href="/admin/all-users" id="cancel_btn">Cancel</a>
     </div>
     <div class="float-end">
@@ -58,34 +58,86 @@
 {{define "js"}}
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    let token = localStorage.getItem("token");
-    let id = window.location.pathname.split("/").pop();
-    deleteBtn = document.getElementById("delete_btn");
-    document.addEventListener("DOMContentLoaded", function() {
-        if (id !== "0") {
-            if (id !== "{{.UserID}}") {
-                deleteBtn.classList.remove("d-none");
-            }
-            let requestOptions = {
-                method: 'post',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token,
-                },
-            }
+    const token = localStorage.getItem("token");
+    const id = window.location.pathname.split("/").pop();
+    const deleteBtn = document.getElementById("delete_btn");
+    const saveBtn = document.getElementById("save_btn");
 
-            fetch("{{.API}}/api/admin/all-users/" + id, requestOptions)
-            .then(response => response.json())
-            .then(function(data) {
-                console.log(data)
-                if (data) {
-                    document.getElementById("first_name").value = data.first_name
-                    document.getElementById("last_name").value = data.last_name
-                    document.getElementById("email").value = data.email
-                }
-            })
+    function save() {
+        const form = document.getElementById("user_form");
+        if (form.checkValidity() === false) {
+            this.event.preventDefault();
+            this.event.stopPropagation();
+            form.classList.add("was-validated");
+            return
         }
+        form.classList.add("was-validated");
+
+        const password = getElementValue("password")
+
+        if (password !== getElementValue("verify_password")) {
+            Swal.fire("Password do not match");
+            return
+        }
+
+        const payload = {
+            id: parseInt(id, 10),
+            first_name: getElementValue("first_name"),
+            last_name: getElementValue("last_name"),
+            email: getElementValue("email"),
+            password: password,
+        }
+
+        let requestOptions = {
+            method: 'post',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+            },
+            body: JSON.stringify(payload)
+        }
+
+        fetch("{{.API}}/api/admin/all-users/edit", requestOptions)
+        .then(response => response.json())
+        .then(function(data) {
+            if (data.has_error) {
+                Swal.fire("Error: " + data.message)
+            } else {
+                location.href = "/admin/all-users"
+            }
+        })
+
+
+    }
+    document.addEventListener("DOMContentLoaded", function() {
+        if (id === "0" || isNaN(id)) {
+            saveBtn.classList.add("d-none");
+            deleteBtn.classList.add("d-none");
+            return
+        }
+        if (id !== "{{.UserID}}") {
+            deleteBtn.classList.remove("d-none");
+        }
+        let requestOptions = {
+            method: 'post',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+            },
+        }
+
+        fetch("{{.API}}/api/admin/all-users/" + id, requestOptions)
+        .then(response => response.json())
+        .then(function(data) {
+            console.log(data)
+            if (data) {
+                document.getElementById("first_name").value = data.first_name
+                document.getElementById("last_name").value = data.last_name
+                document.getElementById("email").value = data.email
+            }
+        })
     })
 
     deleteBtn.addEventListener("click", function() {
