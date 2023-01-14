@@ -795,5 +795,11 @@ func (m *DBWrapper) DeleteUser(id int) error {
 		return err
 	}
 
+	statement = `delete from tokens where user_id = ?`
+	_, err = m.DB.ExecContext(ctx, statement, id)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
