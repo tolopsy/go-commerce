@@ -7,8 +7,99 @@
 {{define "content"}}
     <h2 class="mt-5">Admin User</h2>
     <hr>
+    <form method="post" action="" name="user_form" id="user_form">
+
+    <div class="mb-3">
+        <label for="first_name" class="form-label">First Name</label>
+        <input type="text" class="form-control" id="first_name"
+            name="first_name" autocomplete="first_name-new" required
+        />
+    </div>
+    <div class="mb-3">
+        <label for="last_name" class="form-label">Last Name</label>
+        <input type="text" class="form-control" id="last_name"
+            name="last_name" autocomplete="last_name-new" required
+        />
+    </div>
+    <div class="mb-3">
+        <label for="email" class="form-label">Email Address</label>
+        <input type="email" class="form-control" id="email"
+            name="email" autocomplete="email-new" required
+        />
+    </div>
+    <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password"
+            name="password" required
+        />
+    </div>
+    <div class="mb-3">
+        <label for="verify_password" class="form-label">Verify Password</label>
+        <input type="password" class="form-control" id="verify_password"
+            name="verify_password" required
+        />
+    </div>
+
+    <hr>
+
+    <div class="float-start">
+        <a class="btn btn-primary" href="javascript:void(0);" id="save_btn">Save Changes</a>
+        <a class="btn btn-warning" href="/admin/all-users" id="cancel_btn">Cancel</a>
+    </div>
+    <div class="float-end">
+        <a class="btn btn-danger d-none" href="javascript:void(0);" id="delete_btn">Delete</a>
+    </div>
+
+    <div class="clearfix"></div>
+
+    </form>
 {{end}}
 
 {{define "js"}}
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    let token = localStorage.getItem("token");
+    let id = window.location.pathname.split("/").pop();
+    deleteBtn = document.getElementById("delete_btn");
+    document.addEventListener("DOMContentLoaded", function() {
+        if (id !== "0") {
+            if (id !== "{{.UserID}}") {
+                deleteBtn.classList.remove("d-none");
+            }
+            let requestOptions = {
+                method: 'post',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token,
+                },
+            }
 
+            fetch("{{.API}}/api/admin/all-users/" + id, requestOptions)
+            .then(response => response.json())
+            .then(function(data) {
+                console.log(data)
+                if (data) {
+                    document.getElementById("first_name").value = data.first_name
+                    document.getElementById("last_name").value = data.last_name
+                    document.getElementById("email").value = data.email
+                }
+            })
+        }
+    })
+
+    deleteBtn.addEventListener("click", function() {
+        Swal.fire({
+            title: "Are you sure?",
+            text: "You won't be able to undo this",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Delete User"
+        }).then((result) => {
+            console.log("Should delete user", id)
+        })
+    })
+</script>
 {{end}}
