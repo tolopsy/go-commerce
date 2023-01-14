@@ -610,3 +610,24 @@ func (app *application) AddUser(w http.ResponseWriter, r *http.Request) {
 	}
 	app.writeJSON(w, response, http.StatusOK)
 }
+
+func (app *application) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	err = app.DB.DeleteUser(id)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	response := APIResponse{
+		HasError: false,
+		Message: "user successfully deleted",
+	}
+	app.writeJSON(w, response, http.StatusOK)
+}
