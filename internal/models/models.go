@@ -641,7 +641,6 @@ func (m *DBWrapper) GetSubscriptionByID(id int) (Order, error) {
 	return o, nil
 }
 
-
 func (m *DBWrapper) UpdateOrderStatus(id, statusID int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -673,7 +672,7 @@ func (m *DBWrapper) GetAllUsers() ([]*User, error) {
 	defer rows.Close()
 
 	var users []*User
-	for rows.Next(){
+	for rows.Next() {
 		var u User
 		err = rows.Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.CreatedAt, &u.UpdatedAt)
 		if err != nil {
@@ -707,22 +706,62 @@ func (m *DBWrapper) EditUser(u User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	statement := `
-		update users set
-			first_name = ?,
-			last_name = ?,
-			email = ?,
-			updated_at = ?
-		where id = ?
-	`
-	_, err := m.DB.ExecContext(ctx, statement, u.FirstName, u.LastName, u.Email, time.Now(), u.ID)
-	if err != nil {
-		return err
+	if (u.Password == "") {
+		statement := `
+			update users set
+				first_name = ?,
+				last_name = ?,
+				email = ?,
+				updated_at = ?
+			where id = ?
+		`
+		_, err := m.DB.ExecContext(ctx, statement,
+			u.FirstName,
+			u.LastName,
+			u.Email,
+			time.Now(),
+			u.ID,
+		)
+		if err != nil {
+			return err
+		}
+	} else {
+		hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), 12)
+		if err != nil {
+			return err
+		}
+
+		statement := `
+			update users set
+				first_name = ?,
+				last_name = ?,
+				email = ?,
+				password = ?,
+				updated_at = ?
+			where id = ?
+		`
+		_, err = m.DB.ExecContext(ctx, statement,
+			u.FirstName,
+			u.LastName,
+			u.Email,
+			string(hash),
+			time.Now(),
+			u.ID,
+		)
+		if err != nil {
+			return err
+		}
 	}
+	
 	return nil
 }
 
-func (m *DBWrapper) AddUser(u User, hash string) error {
+func (m *DBWrapper) AddUser(u User) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), 12)
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -731,11 +770,11 @@ func (m *DBWrapper) AddUser(u User, hash string) error {
 		values (?, ?, ?, ?, ?, ?)
 	`
 
-	_, err := m.DB.ExecContext(ctx, statement,
+	_, err = m.DB.ExecContext(ctx, statement,
 		u.FirstName,
 		u.LastName,
 		u.Email,
-		hash,
+		string(hash),
 		time.Now(),
 		time.Now(),
 	)
