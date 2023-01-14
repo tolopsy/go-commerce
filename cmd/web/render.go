@@ -18,12 +18,13 @@ type templateData struct {
 	Warning         string
 	Error           string
 	IsAuthenticated int
+	UserID          int
 	API             string
 	CSSVersion      string
 }
 
 func formatCurrency(value int) string {
-	formattedValue := float32(value) /float32(100)
+	formattedValue := float32(value) / float32(100)
 	return fmt.Sprintf("$%.2f", formattedValue)
 }
 
@@ -39,6 +40,7 @@ func (app *application) addDefaultData(td *templateData, r *http.Request) *templ
 
 	if app.SessionManager.Exists(r.Context(), "userID") {
 		td.IsAuthenticated = 1
+		td.UserID = app.SessionManager.GetInt(r.Context(), "userID")
 	} else {
 		td.IsAuthenticated = 0
 	}
@@ -75,7 +77,6 @@ func (app *application) renderTemplate(w http.ResponseWriter, r *http.Request, p
 	}
 	return nil
 }
-
 
 func (app *application) parseTemplate(partials []string, page, templateToRender string) (*template.Template, error) {
 	var t *template.Template
