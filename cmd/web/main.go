@@ -103,6 +103,8 @@ func main() {
 		SessionManager: sessionManager,
 	}
 
+	go app.ListenForWSChannel()
+
 	err = app.serve()
 	if err != nil {
 		log.Fatalln(err)
