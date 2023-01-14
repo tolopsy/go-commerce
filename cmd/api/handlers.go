@@ -566,3 +566,47 @@ func (app *application) OneUser(w http.ResponseWriter, r *http.Request) {
 
 	app.writeJSON(w, user, http.StatusOK)
 }
+
+func (app *application) EditUser(w http.ResponseWriter, r *http.Request) {
+	var user models.User
+
+	err := app.readJSON(w, r, &user)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	err = app.DB.EditUser(user)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	response := APIResponse{
+		HasError: false,
+		Message: "user successfully updated",
+	}
+	app.writeJSON(w, response, http.StatusOK)
+}
+
+func (app *application) AddUser(w http.ResponseWriter, r *http.Request) {
+	var user models.User
+
+	err := app.readJSON(w, r, &user)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	err = app.DB.AddUser(user)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	response := APIResponse{
+		HasError: false,
+		Message: "user successfully added",
+	}
+	app.writeJSON(w, response, http.StatusOK)
+}
