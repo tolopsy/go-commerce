@@ -556,3 +556,20 @@ func (app *application) AllUsers(w http.ResponseWriter, r *http.Request) {
 
 	app.writeJSON(w, allUsers, http.StatusOK)
 }
+
+func (app *application) OneUser(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	user, err := app.DB.GetUserById(id)
+	if err != nil {
+		app.badRequest(w, err)
+		return
+	}
+
+	app.writeJSON(w, user, http.StatusOK)
+}
