@@ -111,6 +111,10 @@
             localStorage.removeItem("token_expiry");
             location.href = "/logout";
         }
+
+        function getElementValue(id) {
+            return document.getElementById(id).value
+        }
     </script>
     {{block "js" .}}
     {{end}}
