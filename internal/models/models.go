@@ -294,11 +294,16 @@ func (w *DBWrapper) Authenticate(email, password string) (int, error) {
 	return id, nil
 }
 
-func (w *DBWrapper) UpdatePasswordForUser(u User, hash string) error {
+func (w *DBWrapper) UpdatePasswordForUser(u User, password string) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	_, err := w.DB.ExecContext(ctx, `update users set password = ? where id = ?`, hash, u.ID)
+	_, err = w.DB.ExecContext(ctx, `update users set password = ? where id = ?`, string(hash), u.ID)
 	if err != nil {
 		return err
 	}

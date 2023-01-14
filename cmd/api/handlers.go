@@ -15,7 +15,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stripe/stripe-go/v72"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type ChargeRequestPayload struct {
@@ -383,13 +382,7 @@ func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newHash, err := bcrypt.GenerateFromPassword([]byte(payload.Password), 12)
-	if err != nil {
-		app.badRequest(w, err)
-		return
-	}
-
-	if err = app.DB.UpdatePasswordForUser(user, string(newHash)); err != nil {
+	if err = app.DB.UpdatePasswordForUser(user, payload.Password); err != nil {
 		app.badRequest(w, err)
 		return
 	}
