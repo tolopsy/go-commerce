@@ -3,3 +3,5 @@
 .env
 dist/
 static/
+pdf_templates/
+invoices/
