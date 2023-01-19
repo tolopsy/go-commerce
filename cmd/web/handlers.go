@@ -161,12 +161,27 @@ func (app *application) PaymentSuccessful(w http.ResponseWriter, r *http.Request
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
-	_, err = app.SaveOrder(order)
+	orderID, err := app.SaveOrder(order)
 	if err != nil {
 		app.errorLog.Println(err)
 		return
 	}
 
+	invoiceData := InvoiceData{
+		ID: orderID,
+		FirstName: trxnData.FirstName,
+		LastName: trxnData.LastName,
+		Email: trxnData.Email,
+		Quantity: order.Quantity,
+		Amount: trxnData.Amount,
+		Product: "Widget",
+		CreatedAt: order.CreatedAt,
+	}
+
+	err = app.CallInvoiceMicroService(invoiceData)
+	if err != nil {
+		app.errorLog.Println(err)
+	}
 	// write data to session and redirect user to new page
 	app.SessionManager.Put(r.Context(), "receipt", trxnData)
 	http.Redirect(w, r, "/receipt", http.StatusSeeOther)
